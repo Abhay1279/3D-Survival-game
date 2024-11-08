@@ -1,7 +1,6 @@
-
-
-
-
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 game.ReplicatedStorage.Events.LoadSlot.OnServerEvent:Connect(function(player, SoundId, Volume)
 
