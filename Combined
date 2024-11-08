@@ -1,0 +1,1008 @@
+
+
+
+
+
+local player = game.Players.LocalPlayer
+
+
+local character = player.Character or player.CharacterAdded:Wait()
+
+
+
+local humanoid = character:WaitForChild("Humanoid")
+
+
+
+local UserInputService = game:GetService("UserInputService")
+
+
+local RunService = game:GetService("RunService")
+
+
+local hud = player.PlayerGui:WaitForChild("HUD")
+
+
+local camera = game.Workspace.CurrentCamera
+
+
+
+local aimCF = CFrame.new()
+
+
+
+local mouse = player:GetMouse()
+
+
+
+local isAiming = false
+
+
+local isShooting = false
+
+
+local isReloading = false
+
+
+local isSprinting = false
+
+
+local canShoot = true
+
+
+
+local bobOffset = CFrame.new()
+
+
+
+local debounce = false
+
+
+
+local currentSwayAMT = -.3
+
+
+local swayAMT = -.3
+
+
+local aimSwayAMT = .2
+
+
+local swayCF = CFrame.new()
+
+
+local lastCameraCF = CFrame.new()
+
+
+
+local fireAnim = nil
+
+
+local equipAnim = nil
+
+
+local deequipAnim = nil
+
+
+local emptyFireAnim = nil
+
+
+local reloadAnim = nil
+
+
+local emptyReloadAnim = nil
+
+
+
+local framework = {
+
+
+        inventory = {
+
+
+                "AK74";
+
+
+                "FiveSeven";
+
+
+                "Knife";
+
+
+                "Frag";
+
+
+        };
+
+
+
+        module = nil;
+
+
+        viewmodel = nil;
+
+
+        currentSlot = 1;
+
+
+}
+
+
+
+function loadSlot(Item)
+
+
+        local viewmodelFolder = game.ReplicatedStorage.ViewModels
+
+
+        local moduleFolder = game.ReplicatedStorage.Modules
+
+
+
+        canShoot = false
+
+
+
+        for i,v in pairs(camera:GetChildren()) do
+
+
+                if v:IsA("Model") then
+
+
+                        equipAnim:Stop()
+
+
+                        fireAnim:Stop()
+
+
+                        emptyFireAnim:Stop()
+
+
+                        reloadAnim:Stop()
+
+
+                        deequipAnim:Play()
+
+
+                        repeat task.wait() until deequipAnim.IsPlaying == false
+
+
+                        v:Destroy()
+
+
+                end
+
+
+        end
+
+
+
+        if moduleFolder:FindFirstChild(Item) then
+
+
+                framework.module = require(moduleFolder:FindFirstChild(Item))
+
+
+
+                if viewmodelFolder:FindFirstChild(Item) then
+
+
+                        framework.viewmodel = viewmodelFolder:FindFirstChild(Item):Clone()
+
+
+                        framework.viewmodel.Parent = camera
+
+
+
+                        if framework.viewmodel and framework.module and character then
+
+
+                                fireAnim = Instance.new("Animation")
+
+
+                                fireAnim.Parent = framework.viewmodel
+
+
+                                fireAnim.Name = "Fire"
+
+
+                                fireAnim.AnimationId = framework.module.fireAnim
+
+
+                                fireAnim = framework.viewmodel.AnimationController.Animator:LoadAnimation(fireAnim)
+
+
+
+                                emptyFireAnim = Instance.new("Animation")
+
+
+                                emptyFireAnim.Parent = framework.viewmodel
+
+
+                                emptyFireAnim.Name = "EmptyFire"
+
+
+                                emptyFireAnim.AnimationId = framework.module.emptyfireAnim
+
+
+                                emptyFireAnim = framework.viewmodel.AnimationController.Animator:LoadAnimation(emptyFireAnim)
+
+
+
+                                equipAnim = Instance.new("Animation")
+
+
+                                equipAnim.Parent = framework.viewmodel
+
+
+                                equipAnim.Name = "Equip"
+
+
+                                equipAnim.AnimationId = framework.module.equipAnim
+
+
+                                equipAnim = framework.viewmodel.AnimationController.Animator:LoadAnimation(equipAnim)
+
+
+
+                                deequipAnim = Instance.new("Animation")
+
+
+                                deequipAnim.Parent = framework.viewmodel
+
+
+                                deequipAnim.Name = "Deequip"
+
+
+                                deequipAnim.AnimationId = framework.module.deequipAnim
+
+
+                                deequipAnim = framework.viewmodel.AnimationController.Animator:LoadAnimation(deequipAnim)
+
+
+
+                                reloadAnim = Instance.new("Animation")
+
+
+                                reloadAnim.Parent = framework.viewmodel
+
+
+                                reloadAnim.Name = "Reload"
+
+
+                                reloadAnim.AnimationId = framework.module.reloadAnim
+
+
+                                reloadAnim = framework.viewmodel.AnimationController.Animator:LoadAnimation(reloadAnim)
+
+
+
+                                emptyReloadAnim = Instance.new("Animation")
+
+
+                                emptyReloadAnim.Parent = framework.viewmodel
+
+
+                                emptyReloadAnim.Name = "EmptyReload"
+
+
+                                emptyReloadAnim.AnimationId = framework.module.emptyReloadAnim
+
+
+                                emptyReloadAnim = framework.viewmodel.AnimationController.Animator:LoadAnimation(emptyReloadAnim)
+
+
+
+                                game.ReplicatedStorage.Events.LoadSlot:FireServer(framework.module.fireSound.SoundId, framework.module.fireSound.Volume)
+
+
+
+                                if framework.viewmodel then
+
+
+                                        for i, v in pairs(framework.viewmodel:GetDescendants()) do
+
+
+                                                if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("Part") then
+
+
+                                                        v.Transparency = 1
+
+
+                                                end
+
+
+                                        end
+
+
+                                end
+
+
+
+                                equipAnim:Play()
+
+
+
+                                task.wait(.1)
+
+
+
+                                if framework.viewmodel then
+
+
+                                        for i, v in pairs(framework.viewmodel:GetDescendants()) do
+
+
+                                                if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("Part") then
+
+
+                                                        if v.Name == "Main" or v.Name == "Muzzle" or v.Name == "FakeCamera" or v.Name == "Aimpart" or v.Name == "HumanoidRootPart" then
+
+
+
+                                                        else
+
+
+                                                                v.Transparency = 0
+
+
+                                                        end
+
+
+                                                end
+
+
+                                        end
+
+
+                                end
+
+
+
+                                canShoot = true
+
+
+                        end
+
+
+                end
+
+
+        end
+
+
+end
+
+
+
+function Shoot()
+
+
+        if framework.module.fireMode == "Semi" then
+
+
+                equipAnim:Stop()
+
+
+                reloadAnim:Stop()
+
+
+
+                if framework.module.ammo == 1 then
+
+
+                        fireAnim:Stop()
+
+
+                        emptyFireAnim:Play()
+
+
+                else
+
+
+                        emptyFireAnim:Stop()
+
+
+                        fireAnim:Play()
+
+
+                end
+
+
+
+                framework.module.ammo -= 1
+
+
+                hud.Ammo.Text = framework.module.ammo
+
+
+
+                game.ReplicatedStorage.Events.Shoot:FireServer(framework.viewmodel.Muzzle.Position, mouse.Hit.p, framework.module.damage, framework.module.headshot, framework.module.bodyshot)
+
+
+
+                if framework.module.ammo == 0 then
+
+
+                        task.wait(.15)
+
+
+                        Reload()
+
+
+                        repeat task.wait() until emptyReloadAnim.IsPlaying == false
+
+
+                        debounce = false
+
+
+                else
+
+
+                        debounce = true
+
+
+
+                        wait(framework.module.debounce)
+
+
+
+                        debounce = false
+
+
+                end
+
+
+        end
+
+
+
+        if framework.module.fireMode == "Full Auto" then
+
+
+                isShooting = true
+
+
+        end
+
+
+end
+
+
+
+function Reload()
+
+
+        canShoot = false
+
+
+        isReloading = true
+
+
+
+        fireAnim:Stop()
+
+
+        emptyFireAnim:Stop()
+
+
+        equipAnim:Stop()
+
+
+
+        if framework.module.ammo > 0 then
+
+
+                reloadAnim:Play()
+
+
+        else
+
+
+                emptyReloadAnim:Play()
+
+
+        end
+
+
+
+        wait(framework.module.reloadTime)
+
+
+        canShoot = true
+
+
+        isReloading = false
+
+
+        framework.module.ammo = framework.module.maxAmmo
+
+
+        hud.Ammo.Text = framework.module.ammo
+
+
+end
+
+
+
+local oldCamCF = CFrame.new()
+
+
+
+function updateCameraShake()
+
+
+        local newCamCF = framework.viewmodel.FakeCamera.CFrame:ToObjectSpace(framework.viewmodel.PrimaryPart.CFrame)
+
+
+        camera.CFrame = camera.CFrame * newCamCF:ToObjectSpace(oldCamCF)
+
+
+        oldCamCF = newCamCF
+
+
+end
+
+
+
+local hud = player.PlayerGui:WaitForChild("HUD")
+
+
+
+RunService.RenderStepped:Connect(function()
+
+
+
+        mouse.TargetFilter = framework.viewmodel
+
+
+
+        if humanoid then
+
+
+                local rot = camera.CFrame:ToObjectSpace(lastCameraCF)
+
+
+                local X,Y,Z = rot:ToOrientation()
+
+
+                swayCF = swayCF:Lerp(CFrame.Angles(math.sin(X) * currentSwayAMT, math.sin(Y) * currentSwayAMT, 0), .1)
+
+
+                lastCameraCF = camera.CFrame
+
+
+
+                if hud and humanoid then
+
+
+                        if framework.viewmodel and framework.module then
+
+
+                                hud.GunName.Text = framework.inventory[framework.currentSlot]
+
+
+                                hud.Ammo.Text = framework.module.ammo
+
+
+                                hud.Ammo.MaxAmmo.Text = framework.module.maxAmmo
+
+
+                        end
+
+
+                end
+
+
+
+                if framework.viewmodel ~= nil and framework.module ~= nil then
+
+
+                        if humanoid.MoveDirection.Magnitude > 0 then
+
+
+                                if humanoid.WalkSpeed == 20 then
+
+
+                                        bobOffset = bobOffset:Lerp(CFrame.new(math.cos(tick() * 3) * .05, -humanoid.CameraOffset.Y/3, 0) * CFrame.Angles(0, math.sin(tick() * -3) * -.04, math.cos(tick() * -3) * .04), .5)
+
+
+                                        isSprinting = false
+
+
+                                elseif humanoid.WalkSpeed == 30 then
+
+
+                                        bobOffset = bobOffset:Lerp(CFrame.new(math.cos(tick() * 4) * .1, -humanoid.CameraOffset.Y/3, 0) * CFrame.Angles(0, math.sin(tick() * -4) * -.1, math.cos(tick() * -4) * .1) * framework.module.sprintCF, .5)
+
+
+                                        isSprinting = true
+
+
+                                end
+
+
+
+                        else
+
+
+                                bobOffset = bobOffset:Lerp(CFrame.new(0, -humanoid.CameraOffset.Y/3, 0), .1)
+
+
+                                isSprinting = false
+
+
+                        end
+
+
+                end
+
+
+
+                for i,v in pairs(camera:GetChildren()) do
+
+
+                        if v:IsA("Model") then
+
+
+                                v:SetPrimaryPartCFrame(camera.CFrame * swayCF * aimCF * bobOffset)
+
+
+                                --updateCameraShake()
+
+
+                        end
+
+
+                end
+
+
+
+                if framework.viewmodel ~= nil then
+
+
+                        if isAiming and framework.viewmodel ~= nil and framework.module.canAim and isSprinting == false then
+
+
+                                local offset = framework.viewmodel.Aimpart.CFrame:ToObjectSpace(framework.viewmodel.PrimaryPart.CFrame)
+
+
+                                aimCF = aimCF:Lerp(offset, framework.module.aimSmooth)
+
+
+                                currentSwayAMT = aimSwayAMT
+
+
+                        else
+
+
+                                local offset = CFrame.new()
+
+
+                                aimCF = aimCF:Lerp(offset, framework.module.aimSmooth)
+
+
+                                currentSwayAMT = swayAMT
+
+
+                        end
+
+
+                end
+
+
+        end
+
+
+end)
+
+
+
+UserInputService.MouseIconEnabled = false
+
+
+
+UserInputService.InputBegan:Connect(function(input)
+
+
+        if input.KeyCode == Enum.KeyCode.One then
+
+
+                if framework.currentSlot ~= 1 then
+
+
+                        loadSlot(framework.inventory[1])
+
+
+                        framework.currentSlot = 1
+
+
+                end
+
+
+        end
+
+
+
+        if input.KeyCode == Enum.KeyCode.Two then
+
+
+                if framework.currentSlot ~= 2 then
+
+
+                        loadSlot(framework.inventory[2])
+
+
+                        framework.currentSlot = 2
+
+
+                end
+
+
+        end
+
+
+
+        if input.KeyCode == Enum.KeyCode.Three then
+
+
+                if framework.currentSlot ~= 3 then
+
+
+                        loadSlot(framework.inventory[3])
+
+
+                        framework.currentSlot = 3
+
+
+                end
+
+
+        end
+
+
+
+        if input.KeyCode == Enum.KeyCode.Four then
+
+
+                if framework.currentSlot ~= 4 then
+
+
+                        loadSlot(framework.inventory[4])
+
+
+                        framework.currentSlot = 4
+
+
+                end
+
+
+        end
+
+
+
+        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+
+
+                isAiming = true
+
+
+        end
+
+
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+
+                if character and framework.viewmodel and framework.module and framework.module.ammo > 0 and debounce == false and isReloading ~= true and canShoot == true then
+
+
+                        Shoot()
+
+
+                end
+
+
+        end
+
+
+
+        if input.KeyCode == Enum.KeyCode.R then
+
+
+                Reload()
+
+
+        end
+
+
+end)
+
+
+
+UserInputService.InputEnded:Connect(function(input)
+
+
+        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+
+
+                isAiming = false
+
+
+        end
+
+
+end)
+
+
+
+game.ReplicatedStorage.Events.PlayerAdded.OnClientEvent:Connect(function(ply, char)
+
+
+
+        player = game.Players.LocalPlayer
+
+
+
+        character = player.Character or player.CharacterAdded:Wait()
+
+
+
+        humanoid = character:WaitForChild("Humanoid")
+
+
+
+        framework.inventory[1] = "AK74"
+
+
+        framework.inventory[2] = "FiveSeven"
+
+
+        framework.inventory[3] = "Knife"
+
+
+        framework.inventory[4] = "Frag"
+
+
+
+        framework.module.ammo = framework.module.maxAmmo
+
+
+
+        framework.module = nil
+
+
+        framework.viewmodel = nil
+
+
+        framework.currentSlot = 1
+
+
+
+        loadSlot(framework.inventory[1])
+
+
+
+        humanoid.Died:Connect(function()
+
+
+
+                if framework.viewmodel then
+
+
+                        framework.viewmodel:Destroy()
+
+
+                end
+
+
+
+                player = nil
+
+
+                character = nil
+
+
+                humanoid = nil
+
+
+
+                local aimCF = CFrame.new()
+
+
+
+                local isAiming = false
+
+
+                local isShooting = false
+
+
+                local isReloading = false
+
+
+                local isSprinting = false
+
+
+                local canShoot = true
+
+
+
+                local bobOffset = CFrame.new()
+
+
+
+                local debounce = false
+
+
+
+                local currentSwayAMT = -.3
+
+
+                local swayAMT = -.3
+
+
+                local aimSwayAMT = .2
+
+
+                local swayCF = CFrame.new()
+
+
+                local lastCameraCF = CFrame.new()
+
+
+
+                local fireAnim = nil
+
+
+        end)
+
+
+end)
+
+
+
+loadSlot(framework.inventory[1])
+
+
+
+while wait() do
+
+
+        if isShooting and framework.module.ammo > 0 and isReloading ~= true and canShoot == true then
+
+
+                fireAnim:Play()
+
+
+                framework.module.ammo -= 1
+
+
+                hud.Ammo.Text = framework.module.ammo
+
+
+                game.ReplicatedStorage.Events.Shoot:FireServer(framework.viewmodel.Muzzle.Position, mouse.Hit.p, framework.module.damage, framework.module.headshot, framework.module.bodyshot)
+
+
+
+                mouse.Button1Up:Connect(function()
+
+
+                        isShooting = false
+
+
+
+                end)
+
+
+
+                wait(framework.module.fireRate)
+
+
+        end
+
+
+
+end
+
+
+
